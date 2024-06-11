@@ -1,0 +1,30 @@
+{
+  "Account": "Tastyworks",
+  "Type": "Invst",
+  "Separator": ",",
+  "StartLine": 2,
+  "Date" : "A",
+  "CsvTimeFormat": "%Y-%m-%dT%H:%M:%S%z",
+  "QifTimeFormat": "%m/%d/%y",
+  "TAmount": "H",
+  "Memo": "G",
+  "Action": "C",
+  "Security": "E",
+  "Instrument": "F",
+  "Quantity": "I",
+  "Price": "J",
+  "Commissions": "K",
+  "Fees": "L",
+  "Multiplier": "M",
+  "ActionMap": 
+  {
+    "Buy to Close": "CvrShrt",
+    "Buy to Open": "Buy",
+    "Sell to Open": "ShtSell",
+    "Sell to Close": "Sell",
+    "Dividend": "Div",
+    "Credit Interest": "IntInc",
+    "Debit Interest": "Cash",
+    "Balance Adjustment": "Cash"
+  }
+}
