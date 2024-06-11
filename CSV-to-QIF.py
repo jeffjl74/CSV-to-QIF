@@ -39,10 +39,10 @@ class ColumnMap:
             self.__dict__[key] = val
 
         # set some defaults
+        if self.__dict__.get("type", None) is None:
+            self.Type = "Bank"
         if self.__dict__.get("Separator", None) is None:
             self.Separator = ","
-        if self.__dict__.get("Type", None) is None:
-            self.Type = "Bank"
         if self.__dict__.get("StartLine", None) is None:
             self.StartLine = 1
         if self.__dict__.get("QifTimeFormat", None) is None:
@@ -75,13 +75,14 @@ class BankRecord:
 
 class InvstRecord:
     def __init__(self, row=None, map=None):
-        self.order = ['date', 'action', 'security', 'price', 'quantity', 'cleared', 'transfer_text', 'memo', 'commission', 'category', 'amount', 'amount_plus', 'amount_transferred']
+        self.order = ['date', 'action', 'security', 'price', 'quantity', 'cleared', 'transfer_text', 'memo', 'commission', 'category', 'amountT', 'amountU', 'amount_transferred']
         self.ids =   ['D',    'N',      'Y',        'I',     'Q',       'C',       'P',             'M',    'O',          'L',        'T',      'U',            '$']
-        
-        self.date_in = datetime.strptime(row[map.Date], map.CsvTimeFormat) if row and map and getattr(map,"Date",None) is not None else None
+
+        self.type = 'Invst'
+        self.date_in = datetime.strptime(row[map.date], map.CsvTimeFormat) if row and map and getattr(map,"date",None) is not None else None
         self.date = datetime.strftime(self.date_in, map.QifTimeFormat) if self.date_in is not None else None
         
-        self.action = row[map.Action] if row and map and getattr(map,"Action",None) is not None and len(row[map.Action]) > 0 else None
+        self.action = row[map.action] if row and map and getattr(map,"action",None) is not None and len(row[map.action]) > 0 else None
         # translate action to QIF terms?
         if self.action is not None:
             self.valmap = getattr(map,"ActionMap",None)
@@ -89,25 +90,40 @@ class InvstRecord:
                 if self.action in self.valmap:
                     self.action = self.valmap[self.action]
 
-        self.security = row[map.Security] if row and map and getattr(map,"Security",None) is not None and len(row[map.Security]) > 0 else None
-        self.price = row[map.Price] if row and map and getattr(map,"Price",None) is not None and len(row[map.Price]) > 0 else None
-        self.multiplier = int(row[map.Multiplier]) if row and map and getattr(map,"Multiplier",None) is not None and len(row[map.Multiplier]) > 0 else 1
-        self.quantity = int(row[map.Quantity]) * self.multiplier if row and map and getattr(map,"Quantity",None) is not None and len(row[map.Quantity]) > 0 and int(row[map.Quantity]) > 0 else None
-        self.cleared = row[map.Cleard] if row and map and getattr(map,"Cleared",None) is not None and len(row[map.Cleared]) > 0 else None
-        self.transfer_text = row[map.TransferText] if row and map and getattr(map,"TransferText",None) is not None and len(row[map.TransferText]) > 0 else None
-        self.memo = row[map.Memo] if row and map and getattr(map,"Memo",None) is not None and len(row[map.Memo]) > 0 else None
-        self.commission = row[map.Commission] if row and map and getattr(map,"Commission",None) is not None and len(row[map.Commision]) > 0 else None
-        self.category = row[map.Category] if row and map and getattr(map,"Category",None) is not None and len(row[map.Category]) > 0 else None
-        self.amount = row[map.TAmount] if row and map and getattr(map,"TAmount",None) is not None and len(row[map.TAmount]) > 0 else None
-        self.amount_plus = row[map.UAmount] if row and map and getattr(map,"UAmount",None) is not None and len(row[map.UAmount]) > 0 else None
-        self.amount_transferred = row[map.TransferAmount] if row and map and getattr(map,"TransferAmount",None) is not None and len(row[map.TransferAmount]) > 0 else None
+        self.security = row[map.security] if row and map and getattr(map,"security",None) is not None and len(row[map.security]) > 0 else None
+        self.price = row[map.price] if row and map and getattr(map,"price",None) is not None and len(row[map.price]) > 0 else None
+        self.multiplier = int(row[map.multiplier]) if row and map and getattr(map,"multiplier",None) is not None and len(row[map.multiplier]) > 0 else 1
+        self.quantity = int(row[map.quantity]) * self.multiplier if row and map and getattr(map,"quantity",None) is not None and len(row[map.quantity]) > 0 and int(row[map.quantity]) > 0 else None
+        self.cleared = row[map.cleard] if row and map and getattr(map,"cleared",None) is not None and len(row[map.cleared]) > 0 else None
+        self.transfer_text = row[map.transfer_text] if row and map and getattr(map,"transfer_text",None) is not None and len(row[map.transfer_text]) > 0 else None
+        self.memo = row[map.memo] if row and map and getattr(map,"memo",None) is not None and len(row[map.memo]) > 0 else None
+        self.commission = row[map.commission] if row and map and getattr(map,"commission",None) is not None and len(row[map.commision]) > 0 else None
+        self.category = row[map.category] if row and map and getattr(map,"category",None) is not None and len(row[map.category]) > 0 else None
+        self.amountT = row[map.amountT] if row and map and getattr(map,"amountT",None) is not None and len(row[map.amountT]) > 0 else None
+        self.amountU = row[map.amountU] if row and map and getattr(map,"amountU",None) is not None and len(row[map.amountU]) > 0 else None
+        self.amount_transferred = row[map.amount_transferred] if row and map and getattr(map,"amount_transferred",None) is not None and len(row[map.amount_transferred]) > 0 else None
 
         # invert anything?
-        self.valmap = getattr(map, "InvertMap", None)
+        self.valmap = getattr(map, "InvertRules", None)
         if self.valmap is not None:
+            # we have invert rules
+            # do we have the attribute(s) it wants to invert?
             for attr in self.valmap:
                 if getattr(self, attr, None) is not None:
-                    print(getattr(self[attr]))
+                    # we have a value for the attribute to be inverted
+                    # get the condition for inverting
+                    cond = self.valmap[attr]
+                    if eval(cond):
+                        # conditions are met
+                        # instead of doing math,
+                        # just change the sign on the string
+                        oldval = self.__dict__[attr]
+                        if oldval.startswith('-'):
+                            self.__dict__[attr] = oldval[1:]        # remove the -
+                        elif oldval.startswith('+'):
+                            self.__dict__[attr] = '-' + oldval[1:]  # remove the +, add a -
+                        else:
+                            self.__dict__[attr] = '-' + oldval      # add a -
 
     def get_formatted_string(self):
         result = ""
@@ -121,11 +137,12 @@ class SecurityRecord:
     def __init__(self, row=None, map=None):
         self.order = ['name', 'symbol', 'type', 'goal']
         self.ids =   ['N',    'S',      'T',        'G']
+        self.type = 'Security'
 
-        self.symbol = row[map.Security] if row and map and getattr(map,"Security",None) is not None and len(row[map.Security]) > 0 else None
-        self.name = row[map.Name] if row and map and getattr(map,"Name",None) and self.symbol is not None and len(row[map.Name]) > 0 else self.symbol
-        self.goal = row[map.Goal] if row and map and getattr(map,"Goal",None) and self.symbol is not None and len(row[map.Goal]) > 0 else None
-        self.type = row[map.Instrument] if row and map and getattr(map,"Instrument",None) and self.symbol is not None and len(row[map.Instrument]) > 0 else None
+        self.symbol = row[map.security] if row and map and getattr(map,"security",None) is not None and len(row[map.security]) > 0 else None
+        self.name = row[map.Name] if row and map and getattr(map,"name",None) and self.symbol is not None and len(row[map.name]) > 0 else self.symbol
+        self.goal = row[map.goal] if row and map and getattr(map,"goal",None) and self.symbol is not None and len(row[map.goal]) > 0 else None
+        self.type = row[map.instrument] if row and map and getattr(map,"instrument",None) and self.symbol is not None and len(row[map.instrument]) > 0 else None
         # translate security type to QIF terms?
         if self.type is not None:
             self.valmap = getattr(map,"SecurityTypeMap",None)
@@ -161,11 +178,11 @@ def readCsv(inf_,outf_,deff_): #will need to receive input csv and def file
         print("Formating is described here: https://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior")
         exit(1)
 
-    if colmap.Account and colmap.Type is not None:
+    if colmap.account and colmap.type is not None:
         acct_rec = StringIO()
         acct_rec.write("!Account\n")
-        acct_rec.write("N" + colmap.Account + "\n")
-        acct_rec.write("T" + colmap.Type + "\n")
+        acct_rec.write("N" + colmap.account + "\n")
+        acct_rec.write("T" + colmap.type + "\n")
         acct_rec.write("^\n")
         outf_.write(acct_rec.getvalue())
         acct_rec.close()
@@ -173,7 +190,7 @@ def readCsv(inf_,outf_,deff_): #will need to receive input csv and def file
     csvIn = csv.reader(inf_, delimiter=colmap.Separator)  #create csv object using the given separator
 
     # if investment, make a pass thru to collect securities
-    if colmap.Type == "Invst":
+    if colmap.type == "Invst":
         sec_rec = StringIO()
         sec_list = []
         for x in range(1, colmap.StartLine): #skip to start line
@@ -201,61 +218,11 @@ def readCsv(inf_,outf_,deff_): #will need to receive input csv and def file
     for row in csvIn:
         rec = InvstRecord(row, colmap)
         if transact_len == 0:
-            transact_rec.write("!Type:" + colmap.Type + "\n")
+            transact_rec.write("!Type:" + colmap.type + "\n")
         transact_len += transact_rec.write(rec.get_formatted_string())
     outf_.write(transact_rec.getvalue())
     transact_rec.close()
 
-def write_file(rec, acct_type, file_):
-    # outFile = open(file_,"a")  #Open file to be appended
-
-    file_.write("!Type:" + acct_type + "\n")
-
-    file_.write(rec)
-    #outFile.write("\n")
-    # file_.close()
-
-
-
-#
-#     @brief Receives data to be written to and its location
-#
-#     @params[in] date_
-#     Data of transaction
-#     @params[in] amount_
-#     Amount of money for transaction
-#     @params[in] memo_
-#     Description of transaction
-#     @params[in] payee_
-#     Transaction paid to
-#     @params[in] filelocation_
-#     Location of the Output file
-#
-#
-# https://en.wikipedia.org/wiki/Quicken_Interchange_Format
-#
-def writeFile(type_,date_,amount_,memo_,payee_, filelocation_):
-    outFile = open(filelocation_,"a")  #Open file to be appended
-    outFile.write("!Type:" + type_ + "\n")
-    outFile.write("D")  #Date line starts with the capital D
-    outFile.write(date_)
-    outFile.write("\n")
-
-    outFile.write("T")  #Transaction amount starts here
-    outFile.write(amount_)
-    outFile.write("\n")
-
-    outFile.write("M")  #Memo Line
-    outFile.write(memo_)
-    outFile.write("\n")
-
-    if(payee_!=-1):
-        outFile.write("P")  #Payee line
-        outFile.write(payee_)
-        outFile.write("\n")
-
-    outFile.write("^\n")  #The last line of each transaction starts with a Caret to mark the end
-    outFile.close()
 def convert():
 
 

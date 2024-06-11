@@ -1,21 +1,21 @@
 {
-  "Account": "Tastyworks",
-  "Type": "Invst",
+  "account": "Tastyworks",
+  "type": "Invst",
   "Separator": ",",
   "StartLine": 2,
-  "Date" : "A",
+  "date" : "A",
   "CsvTimeFormat": "%Y-%m-%dT%H:%M:%S%z",
   "QifTimeFormat": "%m/%d/%y",
-  "TAmount": "H",
-  "Memo": "G",
-  "Action": "C",
-  "Security": "E",
-  "Instrument": "F",
-  "Quantity": "I",
-  "Price": "J",
-  "Commissions": "K",
-  "Fees": "L",
-  "Multiplier": "M",
+  "amountT": "H",
+  "memo": "G",
+  "action": "C",
+  "security": "E",
+  "instrument": "F",
+  "quantity": "I",
+  "price": "J",
+  "commissions": "K",
+  "fees": "L",
+  "multiplier": "M",
   "ActionMap": 
   {
     "Buy to Close": "CvrShrt",
@@ -32,8 +32,8 @@
     "Equity": "Stock",
     "Equity Option": "Option"
   },
-  "InvertMap":
+  "InvertRules":
   {
-    "TAmount": "Action==Buy and Type==Invst"
+    "amountT": "self.action=='Buy' and self.type=='Invst'"
   }
 }
