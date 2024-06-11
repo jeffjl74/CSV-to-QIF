@@ -82,7 +82,7 @@ class InvstRecord:
         self.date = datetime.strftime(self.date_in, map.QifTimeFormat) if self.date_in is not None else None
         
         self.action = row[map.Action] if row and map and getattr(map,"Action",None) is not None and len(row[map.Action]) > 0 else None
-        # translate to QIF terms?
+        # translate action to QIF terms?
         if self.action is not None:
             self.valmap = getattr(map,"ActionMap",None)
             if self.valmap is not None:
@@ -102,6 +102,12 @@ class InvstRecord:
         self.amount_plus = row[map.UAmount] if row and map and getattr(map,"UAmount",None) is not None and len(row[map.UAmount]) > 0 else None
         self.amount_transferred = row[map.TransferAmount] if row and map and getattr(map,"TransferAmount",None) is not None and len(row[map.TransferAmount]) > 0 else None
 
+        # invert anything?
+        self.valmap = getattr(map, "InvertMap", None)
+        if self.valmap is not None:
+            for attr in self.valmap:
+                if getattr(self, attr, None) is not None:
+                    print(getattr(self[attr]))
 
     def get_formatted_string(self):
         result = ""
@@ -110,6 +116,30 @@ class InvstRecord:
             if value is not None:
                 result += f"{id_char}{value}\n"
         return result + "^\n"
+
+class SecurityRecord:
+    def __init__(self, row=None, map=None):
+        self.order = ['name', 'symbol', 'type', 'goal']
+        self.ids =   ['N',    'S',      'T',        'G']
+
+        self.symbol = row[map.Security] if row and map and getattr(map,"Security",None) is not None and len(row[map.Security]) > 0 else None
+        self.name = row[map.Name] if row and map and getattr(map,"Name",None) and self.symbol is not None and len(row[map.Name]) > 0 else self.symbol
+        self.goal = row[map.Goal] if row and map and getattr(map,"Goal",None) and self.symbol is not None and len(row[map.Goal]) > 0 else None
+        self.type = row[map.Instrument] if row and map and getattr(map,"Instrument",None) and self.symbol is not None and len(row[map.Instrument]) > 0 else None
+        # translate security type to QIF terms?
+        if self.type is not None:
+            self.valmap = getattr(map,"SecurityTypeMap",None)
+            if self.valmap is not None:
+                if self.type in self.valmap:
+                    self.type = self.valmap[self.type]
+
+    def get_formatted_string(self):
+        result = ""
+        for attr, id_char in zip(self.order, self.ids):
+            value = getattr(self, attr)
+            if value is not None:
+                result += f"{id_char}{value}\n"
+        return result + "^\n" if len(result) > 0 else None
 
 #
 #     @brief  Takes given CSV and parses it to be exported to a QIF
@@ -131,25 +161,50 @@ def readCsv(inf_,outf_,deff_): #will need to receive input csv and def file
         print("Formating is described here: https://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior")
         exit(1)
 
-    acct_rec = StringIO()
     if colmap.Account and colmap.Type is not None:
+        acct_rec = StringIO()
         acct_rec.write("!Account\n")
         acct_rec.write("N" + colmap.Account + "\n")
         acct_rec.write("T" + colmap.Type + "\n")
         acct_rec.write("^\n")
         outf_.write(acct_rec.getvalue())
-    acct_rec.close()
-
+        acct_rec.close()
 
     csvIn = csv.reader(inf_, delimiter=colmap.Separator)  #create csv object using the given separator
+
+    # if investment, make a pass thru to collect securities
+    if colmap.Type == "Invst":
+        sec_rec = StringIO()
+        sec_list = []
+        for x in range(1, colmap.StartLine): #skip to start line
+            next(csvIn,None)  #skip
+        sec_len = 0;
+        for row in csvIn:
+            rec = SecurityRecord(row, colmap)
+            if rec.symbol is not None:
+                if rec.symbol not in sec_list:
+                    sec_list.append(rec.symbol)
+                    if sec_len == 0:
+                        sec_rec.write("!Type:Security\n")
+                    sec_len += sec_rec.write(rec.get_formatted_string())
+        if sec_len > 0:
+            outf_.write(sec_rec.getvalue())
+        sec_rec.close()
+        inf_.seek(0)
+
 
     for x in range(1, colmap.StartLine): #skip to start line
         next(csvIn,None)  #skip
 
+    transact_rec = StringIO()
+    transact_len = 0
     for row in csvIn:
         rec = InvstRecord(row, colmap)
-        write_file(rec.get_formatted_string(), colmap.Type, outf_)
-
+        if transact_len == 0:
+            transact_rec.write("!Type:" + colmap.Type + "\n")
+        transact_len += transact_rec.write(rec.get_formatted_string())
+    outf_.write(transact_rec.getvalue())
+    transact_rec.close()
 
 def write_file(rec, acct_type, file_):
     # outFile = open(file_,"a")  #Open file to be appended

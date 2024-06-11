@@ -26,5 +26,14 @@
     "Credit Interest": "IntInc",
     "Debit Interest": "Cash",
     "Balance Adjustment": "Cash"
+  },
+  "SecurityTypeMap":
+  {
+    "Equity": "Stock",
+    "Equity Option": "Option"
+  },
+  "InvertMap":
+  {
+    "TAmount": "Action==Buy and Type==Invst"
   }
 }
