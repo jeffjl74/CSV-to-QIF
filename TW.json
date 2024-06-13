@@ -1,8 +1,10 @@
 {
   "account": "Tastyworks",
-  "type": "Invst",
+  "accountType": "Invst",
   "Separator": ",",
   "StartLine": 2,
+  "Fees": "L",
+  "Multiplier": "M",
   "date" : "A",
   "CsvTimeFormat": "%Y-%m-%dT%H:%M:%S%z",
   "QifTimeFormat": "%m/%d/%y",
@@ -10,12 +12,12 @@
   "memo": "G",
   "action": "C",
   "security": "E",
-  "instrument": "F",
+  "symbol": "E",
+  "name": "E",
+  "type": "F",
   "quantity": "I",
   "price": "J",
-  "commissions": "K",
-  "fees": "L",
-  "multiplier": "M",
+  "commission": "K",
   "ActionMap": 
   {
     "Buy to Close": "CvrShrt",
@@ -25,7 +27,12 @@
     "Dividend": "Div",
     "Credit Interest": "IntInc",
     "Debit Interest": "Cash",
-    "Balance Adjustment": "Cash"
+    "Balance Adjustment": "Cash",
+    "Deposit": "Cash",
+    "Fee": "Cash",
+    "Expiration": "prompt",
+    "Assignment": "prompt",
+    "Forward Split": "prompt"
   },
   "SecurityTypeMap":
   {
@@ -34,6 +41,12 @@
   },
   "InvertRules":
   {
-    "amountT": "self.action=='Buy' and self.type=='Invst'"
+    "amountT": "self.action=='Buy' or self.action=='CvrShrt'",
+    "commission": "self.commission < 0"
+  },
+  "CalculationRules":
+  {
+    "commission": ["commission","commission","plus","Fees"],
+    "quantity": ["quantity", "quantity", "times", "Multiplier"]
   }
 }
