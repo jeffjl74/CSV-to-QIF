@@ -1,0 +1,14 @@
+{
+  "Separator": ",",
+  "StartLine": 2,
+  "CsvTimeFormat": "%m/%d/%Y",
+  "QifTimeFormat": "%m/%d/%Y",
+  "account": "Chase checking",
+  "accountType": "Bank",
+  "date" : "B",
+  "payee": "C",
+  "amountT": "D",
+  "memo": "E",
+  "checkNum": "G",
+  "balance": "F"
+}

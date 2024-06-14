@@ -1,13 +1,13 @@
 {
-  "account": "Tastyworks",
-  "accountType": "Invst",
   "Separator": ",",
   "StartLine": 2,
+  "CsvTimeFormat": "%Y-%m-%dT%H:%M:%S%z",
+  "QifTimeFormat": "%m/%d/%Y",
   "Fees": "L",
   "Multiplier": "M",
+  "account": "Tastyworks",
+  "accountType": "Invst",
   "date" : "A",
-  "CsvTimeFormat": "%Y-%m-%dT%H:%M:%S%z",
-  "QifTimeFormat": "%m/%d/%y",
   "amountT": "H",
   "memo": "G",
   "action": "C",
@@ -46,7 +46,7 @@
   },
   "CalculationRules":
   {
-    "commission": ["commission","commission","plus","Fees"],
-    "quantity": ["quantity", "quantity", "times", "Multiplier"]
+    "commission": ["commission","+","Fees"],
+    "quantity": ["quantity", "*", "Multiplier"]
   }
 }
