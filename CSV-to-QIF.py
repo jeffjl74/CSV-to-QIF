@@ -16,6 +16,7 @@
 
 from datetime import datetime
 from io import StringIO
+from pathlib import Path
 import locale
 import os
 import sys
@@ -24,9 +25,15 @@ import json
 
 class ColumnMap:
     def __init__(self, deff_):
+
+        try:
+            csvdeff = json.load(deff_)
+        except json.JSONDecodeError as e:
+            print("Invalid JSON syntax:", e)
+            exit(1)
+
         upperffset = ord("A")
         loweroffset =  ord("a")
-        csvdeff = json.load(deff_)
 
         # time formats @ https://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior
         for key,val in csvdeff.items():
@@ -321,14 +328,8 @@ class SecurityRecord:
 #     File with the settings for converting CSV
 #
 #
-def readCsv(inf_,outf_,deff_): #will need to receive input csv and def file
+def readCsv(inf_,outf_, colmap): #will need to receive input csv and def file
 
-    colmap = ColumnMap(deff_)
-    if getattr(colmap, "CsvTimeFormat", None) is None:
-        print("A CsvTimeFormat entry is required in the json definition file to parse the CSV date.")
-        print("For example: 'CsvTimeFormat': '%m/%d/%y'")
-        print("Formating is described here: https://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior")
-        exit(1)
 
     csvIn = csv.reader(inf_, delimiter=colmap.Separator)  #create csv object using the given separator
 
@@ -421,7 +422,7 @@ def caluculate_field(self, attr, rule):
             string2 = isinstance(self.__dict__[field2], str)
             if string1 or string2:
                 # can't do math on strings
-                print("CalculateRules ", attr, "=", rule, " need non-string inputs")
+                print("CalculateRules ", attr, "=", rule, " must be non-string inputs")
                 return
             if math == '+':
                 self.__dict__[attr] = self.__dict__[field1] + self.__dict__[field2]
@@ -448,42 +449,87 @@ def is_float(text):
 
 def convert():
 
+    # set locale so we handle commas and dots in numbers
+    locale.setlocale(locale.LC_ALL, '')
 
-    error = 'Input error!____ Format [import.csv] [output.csv] [import.def] ____\n\n\
-                 [import.csv] = File to be converted\n\
-                 [output.qif] = File to be created\n\
-                 [import.def] = Definition file describing csv file\n'
+    error = 'Usage: python CSV-to-QIF [import.csv output.qif] import.json\n\
+        import.csv = File to be converted\n\
+        output.qif = File to be created\n\
+        import.json = Definition file describing csv file\n\n\
+        import.csv and output.qif can be ommitted if defined in import.json\n\
+        More info here: https://github.com/jeffjl74/CSV-to-QIF'
 
-    if (len(sys.argv) != 4):  #Check to make sure all the parameters are there
+    params_ok = True
+    colmap = None
+    if (len(sys.argv) == 2):
+        # only specified the json file
+        defPath = sys.argv[1]
+        if not os.path.isfile(defPath):
+            print("Could not find json file ", defPath)
+            params_ok = False
+        else:
+            defFile = open(defPath,'r')
+            colmap = ColumnMap(defFile)
+            defFile.close()
+            fromFileName = getattr(colmap, "CsvFile", "")
+            fromFolder = getattr(colmap, "CsvFolder", ".")
+            toFileName = getattr(colmap, "QifFile", "")
+            toFolder = getattr(colmap, "QifFolder", ".")
+            fromPath = os.path.join(fromFolder, fromFileName)
+            toPath = os.path.join(toFolder, toFileName)
+
+    elif (len(sys.argv) != 4):
         print (error)
         exit(1)
-
-    if os.path.isfile(sys.argv[1]):
-         fromfile = open(sys.argv[1],'r')
     else:
-        print ('\nInput error!____ import.csv: ' + sys.argv[1] + ' does not exist / cannot be opened !!\n')
+        fromPath = sys.argv[1]
+        toPath = sys.argv[2]
+        defPath = sys.argv[3]
+
+    if not os.path.isfile(fromPath):
+        print("Cound not find input CSV file:", fromPath)
+        params_ok = False
+    if not os.path.exists(os.path.dirname(toPath)):
+        print("QIF folder does not exist:", toFolder)
+        params_ok = False
+    if not os.path.isfile(defPath):
+        print("Could not find json file ", defPath)
+        params_ok = False
+
+    if not params_ok:
+        exit(1)
+    
+    try:
+        fromfile = open(fromPath,'r')
+    except:
+        print ('\nException reading ' + fromPath)
         exit(1)
 
     try:
-        tofile   = open(sys.argv[2],'w')
+        tofile = open(toPath,'w')
     except:
-        print ('\nInput error!____ output.csv: ' + sys.argv[2] + ' cannot be created !!\n')
+        print ('\nException writing ' + toPath)
         exit(1)
 
-    if os.path.isfile(sys.argv[3]):
-        deffile = open(sys.argv[3],'r')
-    else:
-        print ('\nInput error!____ import.def: ' + sys.argv[3] + ' does not exist / cannot be opened !!\n')
+    try:
+        if colmap is None:
+            defFile = open(defPath,'r')
+            colmap = ColumnMap(defFile)
+            defFile.close()
+    except:
+        print ('\nException reading ' + defPath)
         exit(1)
- 
-    # to handle commas and dots in numbers
-    locale.setlocale(locale.LC_ALL, '')
 
-    readCsv(fromfile,tofile,deffile)
+    if getattr(colmap, "CsvTimeFormat", None) is None:
+        print("A CsvTimeFormat entry is required in the json definition file to parse the CSV date.")
+        print("For example: 'CsvTimeFormat': '%m/%d/%y'")
+        print("Formating is described here: https://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior")
+        exit(1)
+
+    readCsv(fromfile,tofile,colmap)
 
     fromfile.close()
     tofile.close()
-    deffile.close()
 
 
 

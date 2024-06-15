@@ -11,7 +11,8 @@
       "program": "${file}",
       "console": "integratedTerminal",
       // "args": ["tastytradeg.csv", "transactions.qif", "TW.json"]
-      "args": ["chase.csv", "transactions.qif", "chase.json"]
+      // "args": ["chase.csv", "transactions.qif", "chase.json"]
+      "args": ["chase.json"]
     }
   ]
 }
