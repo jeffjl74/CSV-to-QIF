@@ -10,8 +10,8 @@
       "request": "launch",
       "program": "${file}",
       "console": "integratedTerminal",
-      // "args": ["tastytradeg.csv", "transactions.qif", "TW.json"]
-      // "args": ["chase.csv", "transactions.qif", "chase.json"]
+      // "args": ["-i", "tastytrade.csv", "-o", "transactions.qif", "TW.json"]
+      // "args": ["-i","chase.csv", "-o", "chase.qif", "chase.json"]
       "args": ["chase.json"]
     }
   ]

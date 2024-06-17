@@ -5,28 +5,33 @@ open specification for reading and writing financial data.
 
 This fork is a major rework of the original
 written by Mario Avenoso of mtechcreations.com.
-It keeps the concept of
-"input-file" "output-file" "definition-file".
-But the definition file is now json and has more readability and flexibility.
+It keeps the concept of "input-file" "output-file" "definition-file"
+but has evolved such that it bears little resemblance to the original.
+The definition file is now json and has more features and flexibility
+including the ability to do simple math on the CSV columns
+and translate CSV terms to QIF terms.
 
 The as-is program and definition files will likely not just work for your CSV file.
 Hopefully, you can get a working QIF file by modifying just the definition file.
 But a willingness to tinker with the Python code 
 and some familiarity with the QIF specification will go a long way
-to reaching your goal. 
+to making things work for you. 
 A mostly complete 1999 QIF format file is included in this repository
 and there's info at [wikipedia](https://en.wikipedia.org/wiki/Quicken_Interchange_Format).
 
-While most of the investment account fields are used for typical investment
+While most of the QIF investment account fields are used for typical investment
 transactions like buying and selling stock, many of the banking account
-fields are generally not found in in your checking account CSV download.
+fields (e.g. address) are generally not found in in your checking account CSV download.
 They are included here anyway but have not been tested.
 
 ## Usage
 
-python CSV-to-QIF.py [file-to-convert.csv] [converted-file.qif] [discription.json]
+python CSV-to-QIF.py [-h] [-i file-to-convert.csv] [-o converted-file.qif] discription.json
 
 The description file is a json specification of how to convert the CSV file.
+A couple of examples are inlcuded in this repository.
+
+The input and output file names can ommitted if they are specified in the json file.
 
 ## Json File
 The program already supports the name/value entries in the
@@ -47,19 +52,23 @@ to be modified to support them.
 The json file consists of several sections as described below.
 
 ### First Section (Required)
-The first section specifies how to find the desired columns in the csv file.
+The first section specifies file handling and how to find the desired columns in the csv file.
 The program makes a dictionary entry for each json `Name` in this section.
 
-Just as a hint to usage, names that are capitalized (for example "Separator")
-are used to control interpretion of the file but do not directly become QIF entries.
+Just as a hint to my approach, names that are capitalized (for example "Separator")
+are used to control interpretion of the files but do not directly become QIF entries.
 The recognized controls are:
 
 |Name | Usage |
 |-----|-------|
 |Separator|Column separator character in the csv file. Defaults to ','|
 |StartLine|Line number of the first line to convert. Defaults to 1 to process the first line. An entry of 2 would skip a header line.|
-|CsvTimeFormat|Required. How to parse the date/time in the CSV file. (ref. [Python datetime](https://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior)).|
+|CsvTimeFormat|__Required__. How to parse the date/time in the CSV file. (ref. [Python datetime](https://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior)).|
 |QifTimeFormat|How to output the date/time to the QIF file. Defaults to "%d/%m/%Y". (ref. [Python datetime](https://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior)).|
+|CsvFolder|Directory for the input CSV file. Forward slashes as separators are accepted for Windows paths. This setting is overriden by a -i parameter on the command line if the parameter includes a directory name.|
+|CsvFile|Filename for the input CSV file. This setting is overriden by a -i parameter on the command line. If the parameter does not include a directory name and the CsvFolder is set, the CsvFolder and the parameter file name are joined to create the file's path.|
+|QifFolder|Directory for the output QIF file. Forward slashes as separators are accepted for Windows paths. This setting is overriden by a -o parameter on the command line if the parameter includes a directory name.|
+|QifFile|Filename for the output QIF file. This setting is overriden by a -o parameter on the command line. If the parameter does not include a directory name and the QifFolder is set, the QifFolder and the parameter file name are joined to create the file's path.|
 
 The lowercase json `Names` represent actual QIF identifiers.
 
@@ -73,10 +82,11 @@ The other name/value pairs associate the column in the CSV file with the QIF ite
 The value is the column header letter when the CSV file is opened in a spreadsheet.
 (The program will need modification if there are more than 'Z' columns.)
 
-The example TW.json also illustrates some issues with that particular download file:
+The example TW.json also deals with some issues with that particular download file:
 * There is no entry for the security name. 
 e.g. the symbol MSFT is found in a column `E`, but the name "Microsoft Inc." is not in a column.
-This complicates the generation of the QIF `!Type:Security` record.
+This complicates the generation of the
+QIF `!Type:Security` [record](#securitytypemap-section-investment-accounts).
 So the workaround is to use the symbol column `E` 
 for the name, symbol, and security to make the `!Type:Security` and `!Type:Invst` lists.
 * The total fees are split between two columns, so the json defines a "Fees" column
@@ -90,10 +100,13 @@ So the json defines the "Multiplier" column so we can do the math
 This section defines the translation between the "action"
 as defined in the CSV file the the actions that QIF recognizes.
 For example, in the TW.json file, if the csv column `C` contains "Buy to Open", 
-it is translated to a QIF "NBuy" record.
+it is translated to a QIF "Buy" record.
 
-An entry of "prompt" causes the program to ask the user for the
-QIF action code for that record.
+The json format looks like this:
+`"csv-nomeclature": "qif-nomemclature"`
+
+An entry of "prompt" for the "qif-nomenclature" causes the program to
+ask the user for the QIF action code for that record.
 The TW.json file has "prompt" for records where there is
 not enough information on an individual CSV line to determine what happened.
 
@@ -101,37 +114,47 @@ not enough information on an individual CSV line to determine what happened.
 This section defines the translation between the CSV security type
 and the QIF `!Type:Security` security type.
 
+The json format looks like this:
+`"csv-nomeclature": "qif-nomemclature"`
+
 If the account in an investment account, the program makes a pass
-through the CSV file to collect the list of securities.
+through the CSV file to collect the list of securities
+and that list is written to the QIF file before the list of
+investment transactions.
 
 ### InvertRules Section (Optional)
 This section provides a means to change the sign on specified CSV entries
 when generating the corresponding QIF output.
+
+The json format looks like this:
+`"inverted-field": "invert-condition"`
 
 The field to change is specified as the name of the name/value pair.
 
 The condition under which the sign should be changed is entered as the 
 value of the name/value pair.
 This should look like the expression of a Python `if` statement.
-If a field should always be inverted, the value would just be `True`.
+For example if a field should always be inverted, the value would just be `True`.
 Be sure the include the `self.` when referencing condition values.
+All `self.` references will reference the value on the current CSV row.
 
-The value is tested using the Python eval() function.
+The condition value is tested using the Python eval() function.
 If it evaluates as `True`, the sign of the named field is inverted.
 
 The TW.json file has a couple of examples.
 
 ### CalculationRules Section (Optional)
 This section provides for calculating a QIF output from CSV inputs.
-The Python code currently understands addition and multiplication of two inputs.
+The Python code currently understands addition, subtraction, and multiplication of two inputs.
+The program does not handle inputs that are strings.
 
 Calculations are performed before any [InvertRules](#invertrules-section-optional).
 
 The json format is:
 `"result-field": ["input-field", "operation", "input-field"]`
 
-Suppored values for "operation" are "+" and "*".
-The expression evaluation adds the `self.` to all parameters.
+Suppored values for "operation" are "+", "-", and "*".
+The expression evaluation code adds the `self.` to all parameters.
 So for example an entry of `"commission": ["commission", "+", "Fees"]`
 results in the operation `self.commission = self.commission + self.Fees`.
 

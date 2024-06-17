@@ -16,16 +16,24 @@
 
 from datetime import datetime
 from io import StringIO
-from pathlib import Path
 import locale
 import os
 import sys
 import csv
 import json
+import argparse
 
 class ColumnMap:
     def __init__(self, deff_):
+        """
+        Reads all of the name/value entries in the passed JSON file
+        into a self dictionary. If the value of a Name/value pair
+        is a single letter, it is converted to an integer offset
+        from the letter 'A' (or 'a').
 
+        Args:
+            deff_ (file): The JSON file opened for reading.
+        """
         try:
             csvdeff = json.load(deff_)
         except json.JSONDecodeError as e:
@@ -57,6 +65,13 @@ class ColumnMap:
 
 class AccountRecord:
     def __init__(self, map):
+        """
+        Parses the passed JSON ColumnMap into class variables which
+        can be used to construct a QIF !Account record.
+
+        Args:
+            map (ColumnMap): Contains the JSON to CSV data mapping.
+        """
         self.fields = ['account', 'accountType', 'taxRate', 'description', 'limit', 'balance']
         self.ids =    ['N',       'T',           'R',       'D',           'L',     '$']
 
@@ -82,6 +97,14 @@ class AccountRecord:
 
 class BankRecord:
     def __init__(self, row, map):
+        """
+        Parses the passed CSV row and JSON ColumnMap into class variables which
+        can be used to construct a QIF !Type:Bank record.
+
+        Args:
+            row (csv.reader row): Incomming CSV data.
+            map (ColumnMap): Contains the JSON to CSV data mapping.
+        """
         self.fields = ['date', 'amountT', 'amountU', 'cleared', 'checkNum', 'payee', 'memo', 'address', 'category', 'categoryInSplit', 'memoInSplit', 'amountOfSplit', 'percentageOfSplit', "reimbursable"]
         self.ids =    ['D',    'T',       'U',       'C',       'N',        'P',     'M',    'A',       'L',        'S',               'E',           '$',              '%',                'F']
 
@@ -151,7 +174,36 @@ class BankRecord:
                         and len(row[map.balance]) > 0 \
                         else None
 
+        # any caluculated fields?
+        valmap = getattr(map, "CalculationRules", None)
+        if valmap is not None:
+            for attr in valmap:
+                if getattr(self, attr, None) is not None:
+                    # we have a calculation
+                    expr = valmap[attr]
+                    caluculate_field(self, attr, expr)
+
+        # change the sign on anything?
+        valmap = getattr(map, "InvertRules", None)
+        if valmap is not None:
+            # we have invert rules
+            # do we have the attribute(s) it wants to invert?
+            for attr in valmap:
+                if getattr(self, attr, None) is not None:
+                    # we have a value for the attribute to be inverted
+                    # get the condition for inverting
+                    cond = valmap[attr]
+                    if eval(cond):
+                        # conditions are met
+                        invert_field(self, attr)
+
     def get_formatted_string(self):
+        """
+        Constructs a QIF !Type:Bank record from the class variables.
+
+        Returns:
+            string: The !Type:Bank record (not including the !Type:Bank line).
+        """
         result = ""
         for attr, id_char in zip(self.fields, self.ids):
             value = getattr(self, attr)
@@ -161,6 +213,14 @@ class BankRecord:
 
 class InvstRecord:
     def __init__(self, row, map):
+        """
+        Parses the passed CSV row and JSON ColumnMap into class variables which
+        can be used to construct a QIF !Type:Invst record.
+
+        Args:
+            row (csv.reader row): Incomming CSV data.
+            map (ColumnMap): Contains the JSON to CSV data mapping.
+        """
         self.fields = ['date', 'action', 'security', 'price', 'quantity', 'cleared', 'transfer_text', 'memo', 'commission', 'category', 'amountT', 'amountU', 'amount_transferred']
         self.ids =   ['D',    'N',      'Y',        'I',     'Q',        'C',       'P',             'M',    'O',          'L',        'T',       'U',       '$']
 
@@ -268,6 +328,12 @@ class InvstRecord:
                         invert_field(self, attr)
         
     def get_formatted_string(self):
+        """
+        Constructs a QIF !Type:Invst record from the class variables.
+
+        Returns:
+            string: The !Type:Invst record (not including the !Type:Invst line).
+        """
         result = ""
         for attr, id_char in zip(self.fields, self.ids):
             value = getattr(self, attr)
@@ -277,6 +343,14 @@ class InvstRecord:
 
 class SecurityRecord:
     def __init__(self, row, map):
+        """
+        Parses the passed CSV row and JSON ColumnMap into class variables which
+        can be used to construct a QIF !Type:Security record.
+
+        Args:
+            row (csv.reader row): Incomming CSV data.
+            map (ColumnMap): Contains the JSON to CSV data mapping.
+        """
         self.order = ['name', 'symbol', 'type', 'goal']
         self.ids =   ['N',    'S',      'T',    'G']
 
@@ -310,6 +384,12 @@ class SecurityRecord:
                         else None
 
     def get_formatted_string(self):
+        """
+        Constructs a QIF !Type:Security record from the class variables.
+
+        Returns:
+            string: The !Type:Security record (not including the !Type:Security line).
+        """
         result = ""
         for attr, id_char in zip(self.order, self.ids):
             value = getattr(self, attr)
@@ -317,19 +397,18 @@ class SecurityRecord:
                 result += f"{id_char}{value}\n"
         return result + "^\n" if len(result) > 0 else None
 
-#
-#     @brief  Takes given CSV and parses it to be exported to a QIF
-#
-#     @params[in] inf_
-#     File to be read and converted to QIF
-#     @params[in] outf_
-#     File that the converted data will go
-#     @params[in] deff_
-#     File with the settings for converting CSV
-#
-#
-def readCsv(inf_,outf_, colmap): #will need to receive input csv and def file
+def readCsv(inf_, outf_, colmap):
+    """
+    Reads the CSV file and writes the QIF file using a column map.
 
+    Args:
+        inf_ (file):  The CSV input file opened for reading.
+        outf_ (file): The QIF file opened for writing.
+        colmap (ColumnMap) : The results of parsing the JSON defnition file.
+
+    Returns:
+        None
+    """
 
     csvIn = csv.reader(inf_, delimiter=colmap.Separator)  #create csv object using the given separator
 
@@ -343,36 +422,42 @@ def readCsv(inf_,outf_, colmap): #will need to receive input csv and def file
             for x in range(1, colmap.StartLine): #skip to start line
                 next(csvIn,None)  #skip
             latestDate = datetime.min # little date, everything will be newer than this
-            for row in csvIn:
-                rec = BankRecord(row, colmap)
-                if getattr(rec, "date", None) is not None \
-                    and getattr(rec, "balance", None) is not None:
-                    # update the balance?
-                    rec_time = datetime.strptime(rec.date, colmap.QifTimeFormat)
-                    if rec_time > latestDate:
-                        acct_rec.balance = rec.balance
-                        latestDate = rec_time
+            try:
+                for row in csvIn:
+                    rec = BankRecord(row, colmap)
+                    if getattr(rec, "date", None) is not None \
+                        and getattr(rec, "balance", None) is not None:
+                        # update the balance?
+                        rec_time = datetime.strptime(rec.date, colmap.QifTimeFormat)
+                        if rec_time > latestDate:
+                            acct_rec.balance = rec.balance
+                            latestDate = rec_time
+            except:
+                print("CSV file error (AccountRecord). CSV file may not conform to the json definition file.")
             inf_.seek(0)
         outf_.write(acct_rec.get_formatted_string())
 
     # if investment, make a pass thru to collect securities
     if colmap.accountType == "Invst":
         sec_rec = StringIO()
-        sec_list = []
+        sec_list = [] # only need each security once, track what we've seen
         for x in range(1, colmap.StartLine): #skip to start line
             next(csvIn,None)  #skip
         sec_len = 0
-        for row in csvIn:
-            rec = SecurityRecord(row, colmap)
-            if getattr(rec, "type", None) is not None:
-                if rec.symbol not in sec_list:
-                    sec_list.append(rec.symbol)
-                    if sec_len == 0:
-                        sec_rec.write("!Type:Security\n")
-                    sec_len += sec_rec.write(rec.get_formatted_string())
-        if sec_len > 0:
-            outf_.write(sec_rec.getvalue())
-        sec_rec.close()
+        try:
+            for row in csvIn:
+                rec = SecurityRecord(row, colmap)
+                if getattr(rec, "type", None) is not None:
+                    if rec.symbol not in sec_list:
+                        sec_list.append(rec.symbol)
+                        if sec_len == 0:
+                            sec_rec.write("!Type:Security\n")
+                        sec_len += sec_rec.write(rec.get_formatted_string())
+            if sec_len > 0:
+                outf_.write(sec_rec.getvalue())
+            sec_rec.close()
+        except:
+            print("CSV file error (SecurityRecord). CSV file may not conform to the json definition file.")
         inf_.seek(0)
 
 
@@ -381,63 +466,99 @@ def readCsv(inf_,outf_, colmap): #will need to receive input csv and def file
 
     transact_rec = StringIO()
     transact_len = 0
-    for row in csvIn:
-        if colmap.accountType == "Invst":
-            rec = InvstRecord(row, colmap)
-        elif colmap.accountType == "Bank":
-            rec = BankRecord(row, colmap)
-        if transact_len == 0:
-            transact_rec.write("!Type:" + colmap.accountType + "\n")
-        transact_len += transact_rec.write(rec.get_formatted_string())
-    outf_.write(transact_rec.getvalue())
-    transact_rec.close()
+    try:
+        for row in csvIn:
+            if colmap.accountType == "Invst":
+                rec = InvstRecord(row, colmap)
+            elif colmap.accountType == "Bank":
+                rec = BankRecord(row, colmap)
+            if transact_len == 0:
+                transact_rec.write("!Type:" + colmap.accountType + "\n")
+            transact_len += transact_rec.write(rec.get_formatted_string())
+        outf_.write(transact_rec.getvalue())
+        transact_rec.close()
+    except:
+        print("CSV file error (data record). CSV file may not conform to the json definition file.")
 
-def invert_field(self, attr):
-    if isinstance(self.__dict__[attr], str):
+def invert_field(recordClass, attr):
+    """
+    Change the sign of the class variable 'attr' in the class 'recordClass'.
+
+    Args:
+        self (class): Class containing the variable 'attr'.
+        attr (string): Name of the class variable to invert.
+    """
+    if isinstance(recordClass.__dict__[attr], str):
         # just change the sign on the string
-        oldval = self.__dict__[attr]
+        oldval = recordClass.__dict__[attr]
         if oldval.startswith('-'):
-            self.__dict__[attr] = oldval[1:]        # remove the -
+            recordClass.__dict__[attr] = oldval[1:]        # remove the -
         elif oldval.startswith('+'):
-            self.__dict__[attr] = '-' + oldval[1:]  # remove the +, add a -
+            recordClass.__dict__[attr] = '-' + oldval[1:]  # remove the +, add a -
         else:
-            self.__dict__[attr] = '-' + oldval      # add a -
+            recordClass.__dict__[attr] = '-' + oldval      # add a -
     else:
         # it's a number of some sort
-        self.__dict__[attr] = self.__dict__[attr] * -1
+        recordClass.__dict__[attr] = recordClass.__dict__[attr] * -1
 
-def caluculate_field(self, attr, rule):
+def caluculate_field(recordClass, attr, rule):
+    """
+    Perform the math defined by the 'rule' to update the
+    'recordClass' varialbe 'attr'. Variables named in the
+    'rule' must not be strings (can't do math on strings).
+
+    Args:
+        recordClass (class): The class containing the variables
+                             defined in the rule and attr.
+        attr (string): The name of the class variable to update.
+        rule (string array): Defines the math to perform:
+            array[0]: Class variable name
+            array[1]: Operation to perform, either "+" or "*"
+            array[2]: Class variable name
+    """
     if len(rule) < 3:
         return # bad definition in the json file
     
     field1 = rule[0]
     math = rule[1]
     field2 = rule[2]
-    if getattr(self, attr, None) is not None:
+    if getattr(recordClass, attr, None) is not None:
         # result field exists
-        if getattr(self, field1, None) is not None \
-            and getattr(self, field2, None) is not None:
+        if getattr(recordClass, field1, None) is not None \
+            and getattr(recordClass, field2, None) is not None:
             # we have all 3 the fields
-            string1 = isinstance(self.__dict__[field1], str)
-            string2 = isinstance(self.__dict__[field2], str)
+            string1 = isinstance(recordClass.__dict__[field1], str)
+            string2 = isinstance(recordClass.__dict__[field2], str)
             if string1 or string2:
                 # can't do math on strings
-                print("CalculateRules ", attr, "=", rule, " must be non-string inputs")
+                print("error: CalculateRules ", attr, "=", rule, " must be non-string inputs")
                 return
             if math == '+':
-                self.__dict__[attr] = self.__dict__[field1] + self.__dict__[field2]
+                recordClass.__dict__[attr] = recordClass.__dict__[field1] + recordClass.__dict__[field2]
+            elif math == '-':
+                recordClass.__dict__[attr] = recordClass.__dict__[field1] - recordClass.__dict__[field2]
             elif math == '*':
-                self.__dict__[attr] = self.__dict__[field1] * self.__dict__[field2]
-        elif getattr(self, field1, None) is not None:
+                recordClass.__dict__[attr] = recordClass.__dict__[field1] * recordClass.__dict__[field2]
+        elif getattr(recordClass, field1, None) is not None:
             # field2 is missing
             # just set the result to field1
-            self.__dict__[attr] = self.__dict__[field1]
-        elif getattr(self, field2, None) is not None:
+            recordClass.__dict__[attr] = recordClass.__dict__[field1]
+        elif getattr(recordClass, field2, None) is not None:
             # field1 is missing
             # just set the result to field2
-            self.__dict__[attr] = self.__dict__[field2]
+            recordClass.__dict__[attr] = recordClass.__dict__[field2]
 
 def is_float(text):
+    """
+    Tests whether the passed 'text' can be converted to float.
+
+    Args:
+        text (string): Text to test.
+
+    Returns:
+        True if 'text' can convert to a float.
+        False if 'text' does not convert to a float.
+    """
     # check for nan/infinity etc.
     if text.isalpha():
         return False
@@ -448,52 +569,94 @@ def is_float(text):
         return False
 
 def convert():
-
+    """
+    Parses command line and JSON definiton file, verifies inputs,
+    and calls readCsv() if all is well.
+    """
     # set locale so we handle commas and dots in numbers
     locale.setlocale(locale.LC_ALL, '')
 
-    error = 'Usage: python CSV-to-QIF [import.csv output.qif] import.json\n\
-        import.csv = File to be converted\n\
-        output.qif = File to be created\n\
-        import.json = Definition file describing csv file\n\n\
-        import.csv and output.qif can be ommitted if defined in import.json\n\
-        More info here: https://github.com/jeffjl74/CSV-to-QIF'
+    parser = argparse.ArgumentParser(description='Convert CSV file to QIF',
+            epilog='More info here: https://github.com/jeffjl74/CSV-to-QIF')
+    parser.add_argument('-i', dest ='csvFile', 
+                    action ='store', help ='CSV file to convert')
+    parser.add_argument('-o', dest ='qifFile', 
+                    action ='store', help ='QIF file to create')
+    parser.add_argument(dest='jsonFile',
+                    action ='store', help ='JSON conversion definition file')
+    args = parser.parse_args()
 
     params_ok = True
     colmap = None
-    if (len(sys.argv) == 2):
-        # only specified the json file
-        defPath = sys.argv[1]
+    if args.jsonFile is not None:
+        # process the json file
+        defPath = args.jsonFile
         if not os.path.isfile(defPath):
-            print("Could not find json file ", defPath)
+            print("error: Could not find json file ", defPath)
             params_ok = False
         else:
             defFile = open(defPath,'r')
             colmap = ColumnMap(defFile)
             defFile.close()
+            # get file paths from the json
+            # but they could be overridden by the command line parameter
             fromFileName = getattr(colmap, "CsvFile", "")
-            fromFolder = getattr(colmap, "CsvFolder", ".")
+            fromFolder = getattr(colmap, "CsvFolder", "")
             toFileName = getattr(colmap, "QifFile", "")
-            toFolder = getattr(colmap, "QifFolder", ".")
-            fromPath = os.path.join(fromFolder, fromFileName)
-            toPath = os.path.join(toFolder, toFileName)
+            toFolder = getattr(colmap, "QifFolder", "")
+            # get/build CSV file name
+            if args.csvFile and os.path.dirname(args.csvFile):
+                # parameter is the full spec
+                fromPath = args.csvFile
+            elif fromFolder and args.csvFile and not os.path.dirname(args.csvFile):
+                # json has a folder, parameter does not
+                # combine json & parameter
+                fromPath = os.path.join(fromFolder, args.csvFile)
+            elif not args.csvFile:
+                # there is no cmd line parameter
+                # (json might be empty, which is checked later)
+                fromPath = os.path.join(fromFolder, fromFileName)
+            else:
+                # there is no json spec
+                # use the parameter
+                # (param might be empty, which is checked later)
+                fromPath = args.csvFile
 
-    elif (len(sys.argv) != 4):
-        print (error)
-        exit(1)
-    else:
-        fromPath = sys.argv[1]
-        toPath = sys.argv[2]
-        defPath = sys.argv[3]
+            # get/build QIF file name
+            if args.qifFile and os.path.dirname(args.qifFile):
+                # parameter is the full spec
+                toPath = args.qifFile
+            elif toFolder and args.qifFile and not os.path.dirname(args.qifFile):
+                # json has a folder, parameter does not
+                # combine json & parameter
+                toPath = os.path.join(toFolder, args.qifFile)
+            elif not args.qifFile:
+                # there is no cmd line parameter
+                # (json might be empty, which is checked later)
+                toPath = os.path.join(toFolder, toFileName)
+            else:
+                # there is no json spec
+                # use the parameter
+                # (param might be empty, which is checked later)
+                toPath = args.qifFile
 
-    if not os.path.isfile(fromPath):
-        print("Cound not find input CSV file:", fromPath)
+    # verify we have file names
+    if not fromPath:
+        print("error: A CSV file name is required, either on the command line or in the json file.")
         params_ok = False
-    if not os.path.exists(os.path.dirname(toPath)):
-        print("QIF folder does not exist:", toFolder)
+    if not toPath:        
+        print("error: A QIF file name is required, either on the command line or in the json file.")
+        params_ok = False
+
+    # ck existance, print problem(s)
+    if not os.path.isfile(fromPath):
+        print("error: Cound not find input CSV file:", fromPath)
+        params_ok = False
+    if not os.path.exists(os.path.dirname(os.path.abspath(toPath))):
+        print("error: QIF directory does not exist:", toFolder)
         params_ok = False
     if not os.path.isfile(defPath):
-        print("Could not find json file ", defPath)
+        print("error: Could not find json file ", defPath)
         params_ok = False
 
     if not params_ok:
@@ -502,22 +665,13 @@ def convert():
     try:
         fromfile = open(fromPath,'r')
     except:
-        print ('\nException reading ' + fromPath)
+        print ('\n** Exception reading ' + fromPath)
         exit(1)
 
     try:
         tofile = open(toPath,'w')
     except:
-        print ('\nException writing ' + toPath)
-        exit(1)
-
-    try:
-        if colmap is None:
-            defFile = open(defPath,'r')
-            colmap = ColumnMap(defFile)
-            defFile.close()
-    except:
-        print ('\nException reading ' + defPath)
+        print ('\n** Exception writing ' + toPath)
         exit(1)
 
     if getattr(colmap, "CsvTimeFormat", None) is None:
@@ -526,7 +680,7 @@ def convert():
         print("Formating is described here: https://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior")
         exit(1)
 
-    readCsv(fromfile,tofile,colmap)
+    readCsv(fromfile, tofile, colmap)
 
     fromfile.close()
     tofile.close()
