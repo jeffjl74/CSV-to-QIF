@@ -1,0 +1,15 @@
+{
+  "Separator": ",",
+  "StartLine": 2,
+  "CsvTimeFormat": "%m/%d/%Y",
+  "QifTimeFormat": "%m/%d/%Y",
+  "CsvFile": "example-bank.csv",
+  "QifFile": "example-bank.qif",
+  "account": "Example checking",
+  "accountType": "Bank",
+  "date" : "A",
+  "payee": "B",
+  "amountT": "E",
+  "memo": "E",
+  "checkNum": "C"
+}

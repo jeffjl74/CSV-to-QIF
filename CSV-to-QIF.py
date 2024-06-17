@@ -505,7 +505,7 @@ def caluculate_field(recordClass, attr, rule):
     """
     Perform the math defined by the 'rule' to update the
     'recordClass' varialbe 'attr'. Variables named in the
-    'rule' must not be strings (can't do math on strings).
+    'rule' must not be strings (currently can't do math on strings).
 
     Args:
         recordClass (class): The class containing the variables
@@ -513,7 +513,7 @@ def caluculate_field(recordClass, attr, rule):
         attr (string): The name of the class variable to update.
         rule (string array): Defines the math to perform:
             array[0]: Class variable name
-            array[1]: Operation to perform, either "+" or "*"
+            array[1]: Operation to perform, either "+", "-", or "*"
             array[2]: Class variable name
     """
     if len(rule) < 3:
@@ -588,6 +588,8 @@ def convert():
 
     params_ok = True
     colmap = None
+    fromPath = ''
+    toPath = ''
     if args.jsonFile is not None:
         # process the json file
         defPath = args.jsonFile
