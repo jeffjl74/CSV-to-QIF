@@ -3,7 +3,7 @@
 This is a Python program to take a CSV file and convert it to a QIF file. QIF is an 
 open specification for reading and writing financial data.
 
-The only file you really need from this repository is the CSV-to-QIF.py
+The only file you really need to download from this repository is the CSV-to-QIF.py
 python program. You will then need to create JSON file(s) that match your CSV downloads.
 There are some examples here.
 
@@ -33,7 +33,7 @@ They are included here anyway but have not been tested.
 python CSV-to-QIF.py [-h] [-i file-to-convert.csv] [-o converted-file.qif] discription.json
 
 The description file is a json specification of how to convert the CSV file.
-A couple of examples are inlcuded in this repository.
+A few examples are inlcuded in this repository.
 
 The input and output file names can ommitted if they are specified in the json file.
 
@@ -48,6 +48,10 @@ The example Chase.json file converts a CSV file downloaded from Chase Bank
 The example TW.json file converts a CSV file downloaded from TastyWorks brokerage
 (at least as of this writing). The first line of the CSV file looks like this:
 ![tastyworks](images/tw.png)
+
+The example Cit.json file converts a CSV file downloaded from citi credit card
+(at least as of this writing). The first line of the CSV file looks like this:
+![citi](images/citi.png)
 
 If more fields are added to the json file than are listed in the records'
 `self.fields` and `self.ids`, the Python code would need
@@ -85,6 +89,12 @@ latest date and use that to make a "$" entry in the "!Account" record.
 The other name/value pairs associate the column in the CSV file with the QIF item.
 The value is the column header letter when the CSV file is opened in a spreadsheet.
 (The program will need modification if there are more than 'Z' columns.)
+
+The example Citi.json credit card definition creates a QIF "T" amount line by
+[adding](#calculationrules-section-optional)
+then [inverting](#invertrules-section-optional)
+the credit and debit columns. Since QIF does not have fields for "credit"
+and "debit", the Python code creates a "Credit" and "Debit" for this purpose.
 
 The example TW.json also deals with some issues with that particular download file:
 * There is no entry for the security name. 

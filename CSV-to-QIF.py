@@ -123,7 +123,9 @@ class BankRecord:
                         and getattr(map,"amountU",None) is not None \
                         and len(row[map.amountU]) > 0 \
                         else None
-        self.cleared = row[map.cleared] if row and map \
+        # keeping only the first letter of the "cleared" column, may not work for all files
+        # (i.e. works if the column says "Cleared", "Reconciled", or blank/missing)
+        self.cleared = row[map.cleared][:1] if row and map \
                         and getattr(map,"cleared",None) is not None \
                         and len(row[map.cleared]) > 0 \
                         else None
@@ -173,15 +175,24 @@ class BankRecord:
                         and getattr(map,"balance",None) is not None \
                         and len(row[map.balance]) > 0 \
                         else None
+        # and create a couple of non-QIF intermediate fields for credit card calculation
+        self.Credit = locale.atof(row[map.Credit]) if row and map \
+                        and getattr(map,"Credit",None) is not None \
+                        and len(row[map.Credit]) > 0 \
+                        else None
+        self.Debit = locale.atof(row[map.Debit]) if row and map \
+                        and getattr(map,"Debit",None) is not None \
+                        and len(row[map.Debit]) > 0 \
+                        else None
+
 
         # any caluculated fields?
         valmap = getattr(map, "CalculationRules", None)
         if valmap is not None:
             for attr in valmap:
-                if getattr(self, attr, None) is not None:
-                    # we have a calculation
-                    expr = valmap[attr]
-                    caluculate_field(self, attr, expr)
+                # we have a calculation
+                expr = valmap[attr]
+                caluculate_field(self, attr, expr)
 
         # change the sign on anything?
         valmap = getattr(map, "InvertRules", None)
@@ -415,7 +426,7 @@ def readCsv(inf_, outf_, colmap):
     # fill out the account record if the json spec has an account name
     if colmap.account and colmap.accountType is not None:
         acct_rec = AccountRecord(colmap)
-        if acct_rec.accountType == 'Bank' \
+        if acct_rec.accountType != 'Invst' \
             and getattr(colmap, "balance", None) is not None:
             # we have a bank balance column
             # make a pass through the csv and collect the balance with the latest date
@@ -470,7 +481,7 @@ def readCsv(inf_, outf_, colmap):
         for row in csvIn:
             if colmap.accountType == "Invst":
                 rec = InvstRecord(row, colmap)
-            elif colmap.accountType == "Bank":
+            else:
                 rec = BankRecord(row, colmap)
             if transact_len == 0:
                 transact_rec.write("!Type:" + colmap.accountType + "\n")
@@ -522,31 +533,29 @@ def caluculate_field(recordClass, attr, rule):
     field1 = rule[0]
     math = rule[1]
     field2 = rule[2]
-    if getattr(recordClass, attr, None) is not None:
-        # result field exists
-        if getattr(recordClass, field1, None) is not None \
-            and getattr(recordClass, field2, None) is not None:
-            # we have all 3 the fields
-            string1 = isinstance(recordClass.__dict__[field1], str)
-            string2 = isinstance(recordClass.__dict__[field2], str)
-            if string1 or string2:
-                # can't do math on strings
-                print("error: CalculateRules ", attr, "=", rule, " must be non-string inputs")
-                return
-            if math == '+':
-                recordClass.__dict__[attr] = recordClass.__dict__[field1] + recordClass.__dict__[field2]
-            elif math == '-':
-                recordClass.__dict__[attr] = recordClass.__dict__[field1] - recordClass.__dict__[field2]
-            elif math == '*':
-                recordClass.__dict__[attr] = recordClass.__dict__[field1] * recordClass.__dict__[field2]
-        elif getattr(recordClass, field1, None) is not None:
-            # field2 is missing
-            # just set the result to field1
-            recordClass.__dict__[attr] = recordClass.__dict__[field1]
-        elif getattr(recordClass, field2, None) is not None:
-            # field1 is missing
-            # just set the result to field2
-            recordClass.__dict__[attr] = recordClass.__dict__[field2]
+    if getattr(recordClass, field1, None) is not None \
+        and getattr(recordClass, field2, None) is not None:
+        # we have all 3 the fields
+        string1 = isinstance(recordClass.__dict__[field1], str)
+        string2 = isinstance(recordClass.__dict__[field2], str)
+        if string1 or string2:
+            # can't do math on strings
+            print("error: CalculateRules ", attr, "=", rule, " must be non-string inputs")
+            return
+        if math == '+':
+            recordClass.__dict__[attr] = recordClass.__dict__[field1] + recordClass.__dict__[field2]
+        elif math == '-':
+            recordClass.__dict__[attr] = recordClass.__dict__[field1] - recordClass.__dict__[field2]
+        elif math == '*':
+            recordClass.__dict__[attr] = recordClass.__dict__[field1] * recordClass.__dict__[field2]
+    elif getattr(recordClass, field1, None) is not None:
+        # field2 is missing
+        # just set the result to field1
+        recordClass.__dict__[attr] = recordClass.__dict__[field1]
+    elif getattr(recordClass, field2, None) is not None:
+        # field1 is missing
+        # just set the result to field2
+        recordClass.__dict__[attr] = recordClass.__dict__[field2]
 
 def is_float(text):
     """

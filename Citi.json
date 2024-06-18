@@ -1,0 +1,23 @@
+{
+  "Separator": ",",
+  "StartLine": 2,
+  "CsvTimeFormat": "%m/%d/%Y",
+  "QifTimeFormat": "%m/%d/%Y",
+  "CsvFile": "citi.csv",
+  "QifFile": "citi.qif",
+  "Credit": "E",
+  "Debit": "D",
+  "account": "Citi Mastercard",
+  "accountType": "CCard",
+  "date" : "B",
+  "payee": "C",
+  "cleared": "A",
+  "CalculationRules":
+  {
+    "amountT": ["Credit","+","Debit"]
+  },
+  "InvertRules":
+  {
+    "amountT": "True"
+  }
+}
