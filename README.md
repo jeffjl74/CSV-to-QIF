@@ -30,7 +30,7 @@ They are included here anyway but have not been tested.
 
 ## Usage
 
-python CSV-to-QIF.py [-h] [-i file-to-convert.csv] [-o converted-file.qif] discription.json
+python CSV-to-QIF.py [-h] [-i file-to-convert.csv] [-o converted-file.qif] description.json
 
 The description file is a json specification of how to convert the CSV file.
 A few examples are inlcuded in this repository.
@@ -49,7 +49,7 @@ The example TW.json file converts a CSV file downloaded from TastyWorks brokerag
 (at least as of this writing). The first line of the CSV file looks like this:
 ![tastyworks](images/tw.png)
 
-The example Cit.json file converts a CSV file downloaded from citi credit card
+The example Citi.json file converts a CSV file downloaded from citi credit card
 (at least as of this writing). The first line of the CSV file looks like this:
 ![citi](images/citi.png)
 
@@ -211,8 +211,8 @@ The json format is:
 ```json
 "Translations":
   {
-    "result-field-a": ["condition_a1", "value_a1", "condition_a2", "value_a2", ... "condition_aN", "value_aN"],
-    "result-field-b": ["condition_b1", "value_b1", "condition_b2", "value_b2", ... "condition_bN", "value_bN"]
+    "result-field-a": ["condition_a1", "value_a1", "condition_a2", "value_a2", "...etc"],
+    "result-field-b": ["condition_b1", "value_b1", "condition_b2", "value_b2", "...etc""]
   }
 ```
 The resulting operation would look something like this:
