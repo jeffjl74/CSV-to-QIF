@@ -4,7 +4,8 @@ This is a Python program to take a CSV file and convert it to a QIF file. QIF is
 open specification for reading and writing financial data.
 
 The only file you really need to download from this repository is the CSV-to-QIF.py
-python program. You will then need to create JSON file(s) that match your CSV downloads.
+python program. You can find that under [releases](https://github.com/jeffjl74/CSV-to-QIF/releases).
+You will then need to create JSON file(s) that match your CSV downloads.
 There are some examples here.
 
 This fork is a major rework of the original
