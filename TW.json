@@ -13,7 +13,6 @@
   "action": "C",
   "security": "E",
   "symbol": "E",
-  "name": "E",
   "type": "F",
   "quantity": "I",
   "price": "J",
@@ -47,6 +46,19 @@
   "CalculationRules":
   {
     "commission": ["commission","+","Fees"],
-    "quantity": ["quantity", "*", "Multiplier"]
+    "quantity": ["quantity", "*", "Multiplier"],
+    "amountT": ["amountT", "+", "commission"],
+    "price": ["price", "/", "Multiplier"]
+  },
+  "Translations":
+  {
+      "security":
+      [
+        "self.security== 'MSFT' ", "Microsoft",
+        "self.security== 'NVDA' ", "Nvidia",
+        "self.security== 'COST' ", "Costco",
+        "self.security== 'AMZN' ", "Amazon",
+        "self.security== 'AAPL' ", "Apple Computer"
+      ]
   }
 }

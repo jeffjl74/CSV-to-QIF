@@ -62,6 +62,8 @@ class ColumnMap:
             self.StartLine = 1
         if self.__dict__.get("QifTimeFormat", None) is None:
             self.QifTimeFormat = "%d/%m/%Y"
+        if self.__dict__.get("CurrencySymbol", None) is None:
+            self.CurrencySymbol = ""
 
 class AccountRecord:
     def __init__(self, map):
@@ -115,11 +117,11 @@ class BankRecord:
         self.date = datetime.strftime(self.date_in, map.QifTimeFormat) \
                         if self.date_in is not None \
                         else None
-        self.amountT = locale.atof(row[map.amountT]) if row and map \
+        self.amountT = locale.atof(row[map.amountT].strip(map.CurrencySymbol)) if row and map \
                         and getattr(map,"amountT",None) is not None \
                         and len(row[map.amountT]) > 0 \
                         else None
-        self.amountU = locale.atof(row[map.amountU]) if row and map \
+        self.amountU = locale.atof(row[map.amountU].strip(map.CurrencySymbol)) if row and map \
                         and getattr(map,"amountU",None) is not None \
                         and len(row[map.amountU]) > 0 \
                         else None
@@ -157,11 +159,11 @@ class BankRecord:
                         and getattr(map,"memoInSplit",None) is not None \
                         and len(row[map.memoInSplit]) > 0 \
                         else None
-        self.amountOfSplit = locale.atof(row[map.amountOfSplit]) if row and map \
+        self.amountOfSplit = locale.atof(row[map.amountOfSplit].strip(map.CurrencySymbol)) if row and map \
                         and getattr(map,"amountOfSplit",None) is not None \
                         and len(row[map.amountOfSplit]) > 0 \
                         else None
-        self.percentageOfSplit = locale.atof(row[map.percentageOfSplit]) if row and map \
+        self.percentageOfSplit = locale.atof(row[map.percentageOfSplit].strip(map.CurrencySymbol)) if row and map \
                         and getattr(map,"percentageOfSplit",None) is not None \
                         and len(row[map.percentageOfSplit]) > 0 \
                         else None
@@ -171,16 +173,16 @@ class BankRecord:
                         else None
 
         # we can also collect the balance to support the AccountRecord
-        self.balance = locale.atof(row[map.balance]) if row and map \
+        self.balance = locale.atof(row[map.balance].strip(map.CurrencySymbol)) if row and map \
                         and getattr(map,"balance",None) is not None \
                         and len(row[map.balance]) > 0 \
                         else None
         # and create a couple of non-QIF intermediate fields for credit card calculation
-        self.Credit = locale.atof(row[map.Credit]) if row and map \
+        self.Credit = locale.atof(row[map.Credit].strip(map.CurrencySymbol)) if row and map \
                         and getattr(map,"Credit",None) is not None \
                         and len(row[map.Credit]) > 0 \
                         else None
-        self.Debit = locale.atof(row[map.Debit]) if row and map \
+        self.Debit = locale.atof(row[map.Debit].strip(map.CurrencySymbol)) if row and map \
                         and getattr(map,"Debit",None) is not None \
                         and len(row[map.Debit]) > 0 \
                         else None
@@ -233,7 +235,7 @@ class InvstRecord:
             map (ColumnMap): Contains the JSON to CSV data mapping.
         """
         self.fields = ['date', 'action', 'security', 'price', 'quantity', 'cleared', 'transfer_text', 'memo', 'commission', 'category', 'amountT', 'amountU', 'amount_transferred']
-        self.ids =   ['D',    'N',      'Y',        'I',     'Q',        'C',       'P',             'M',    'O',          'L',        'T',       'U',       '$']
+        self.ids =    ['D',    'N',      'Y',        'I',     'Q',        'C',       'P',             'M',    'O',          'L',        'T',       'U',       '$']
 
         self.date_in = datetime.strptime(row[map.date], map.CsvTimeFormat) \
                         if row and map \
@@ -266,11 +268,11 @@ class InvstRecord:
                     else:
                         self.action = self.valmap[self.action]
 
-        self.price = abs(locale.atof(row[map.price])) if row and map \
+        self.price = abs(locale.atof(row[map.price].strip(map.CurrencySymbol))) if row and map \
                         and getattr(map,"price",None) is not None \
                         and len(row[map.price]) > 0 \
                         else None
-        self.quantity = locale.atof(row[map.quantity]) \
+        self.quantity = locale.atof(row[map.quantity].strip(map.CurrencySymbol)) \
                         if row and map and getattr(map,"quantity",None) is not None \
                         and len(row[map.quantity]) > 0 \
                         and int(row[map.quantity]) > 0 \
@@ -283,7 +285,7 @@ class InvstRecord:
                         and getattr(map,"transfer_text",None) is not None \
                         and len(row[map.transfer_text]) > 0 \
                         else None
-        self.commission = locale.atof(row[map.commission]) if row and map \
+        self.commission = locale.atof(row[map.commission].strip(map.CurrencySymbol)) if row and map \
                         and getattr(map,"commission",None) is not None \
                         and len(row[map.commission]) > 0 \
                         and is_float(row[map.commission]) \
@@ -292,11 +294,11 @@ class InvstRecord:
                         getattr(map,"category",None) is not None \
                         and len(row[map.category]) > 0 \
                         else None
-        self.amountT = locale.atof(row[map.amountT]) if row and map \
+        self.amountT = locale.atof(row[map.amountT].strip(map.CurrencySymbol)) if row and map \
                         and getattr(map,"amountT",None) is not None \
                         and len(row[map.amountT]) > 0 \
                         else None
-        self.amountU = locale.atof(row[map.amountU]) if row and map \
+        self.amountU = locale.atof(row[map.amountU].strip(map.CurrencySymbol)) if row and map \
                         and getattr(map,"amountU",None) is not None \
                         and len(row[map.amountU]) > 0 \
                         else None
@@ -306,7 +308,7 @@ class InvstRecord:
                         else None
 
         # extra columns that are not part of a QIF record but we want to capture
-        self.Fees = locale.atof(row[map.Fees]) if row and map \
+        self.Fees = locale.atof(row[map.Fees].strip(map.CurrencySymbol)) if row and map \
                         and getattr(map,"Fees",None) is not None \
                         and len(row[map.Fees]) > 0 \
                         else None
@@ -323,6 +325,22 @@ class InvstRecord:
                     # we have a calculation
                     expr = valmap[attr]
                     caluculate_field(self, attr, expr)
+
+        # any translations?
+        valmap = getattr(map, "Translations", None)
+        if valmap is not None:
+            # we have translation rules
+            for attr in valmap:
+                # do we have the field it wants to translate?
+                if attr in self.fields:
+                    entries = len(valmap[attr])
+                    if entries % 2 == 0:
+                        for x in range(0, entries, 2):
+                            cond = valmap[attr][x]
+                            newval = valmap[attr][x+1]
+                            if eval(cond):
+                                # condition is true
+                                self.__dict__[attr] = newval
 
         # change the sign on anything?
         valmap = getattr(map, "InvertRules", None)
@@ -362,8 +380,8 @@ class SecurityRecord:
             row (csv.reader row): Incomming CSV data.
             map (ColumnMap): Contains the JSON to CSV data mapping.
         """
-        self.order = ['name', 'symbol', 'type', 'goal']
-        self.ids =   ['N',    'S',      'T',    'G']
+        self.fields = ['security', 'symbol', 'type', 'goal']
+        self.ids =    ['N',        'S',      'T',    'G']
 
         self.typeTest = row[map.type] if row and map \
                         and getattr(map,"type",None) \
@@ -380,19 +398,35 @@ class SecurityRecord:
         if self.typeTest is not None and (self.typeTest == 'Stock' or self.typeTest == 'Option'):
             self.type = self.typeTest
             self.symbol = row[map.symbol] if row and map \
-                          and getattr(map,"symbol",None) is not None \
-                          and len(row[map.symbol]) > 0 \
-                          else None
-            self.name = row[map.name] if row and map \
-                        and getattr(map,"name",None) \
+                        and getattr(map,"symbol",None) is not None \
+                        and len(row[map.symbol]) > 0 \
+                        else None
+            self.security = row[map.security] if row and map \
+                        and getattr(map,"security",None) \
                         and self.symbol is not None \
-                        and len(row[map.name]) > 0 \
+                        and len(row[map.security]) > 0 \
                         else None
             self.goal = row[map.goal] if row and map \
                         and getattr(map,"goal",None) \
                         and self.symbol is not None \
                         and len(row[map.goal]) > 0 \
                         else None
+
+            # any translations?
+            valmap = getattr(map, "Translations", None)
+            if valmap is not None:
+                # we have translation rules
+                for attr in valmap:
+                    # do we have the field it wants to translate?
+                    if attr in self.fields:
+                        entries = len(valmap[attr])
+                        if entries % 2 == 0:
+                            for x in range(0, entries, 2):
+                                cond = valmap[attr][x]
+                                newval = valmap[attr][x+1]
+                                if eval(cond):
+                                    # condition is true
+                                    self.__dict__[attr] = newval
 
     def get_formatted_string(self):
         """
@@ -402,7 +436,7 @@ class SecurityRecord:
             string: The !Type:Security record (not including the !Type:Security line).
         """
         result = ""
-        for attr, id_char in zip(self.order, self.ids):
+        for attr, id_char in zip(self.fields, self.ids):
             value = getattr(self, attr)
             if value is not None:
                 result += f"{id_char}{value}\n"
@@ -490,7 +524,7 @@ def readCsv(inf_, outf_, colmap):
         transact_rec.close()
     except:
         print("CSV file error (data record). CSV file may not conform to the json definition file.")
-
+    
 def invert_field(recordClass, attr):
     """
     Change the sign of the class variable 'attr' in the class 'recordClass'.
@@ -524,7 +558,7 @@ def caluculate_field(recordClass, attr, rule):
         attr (string): The name of the class variable to update.
         rule (string array): Defines the math to perform:
             array[0]: Class variable name
-            array[1]: Operation to perform, either "+", "-", or "*"
+            array[1]: Operation to perform, either "+", "-", "/", or "*"
             array[2]: Class variable name
     """
     if len(rule) < 3:
@@ -548,6 +582,11 @@ def caluculate_field(recordClass, attr, rule):
             recordClass.__dict__[attr] = recordClass.__dict__[field1] - recordClass.__dict__[field2]
         elif math == '*':
             recordClass.__dict__[attr] = recordClass.__dict__[field1] * recordClass.__dict__[field2]
+        elif math == '/':
+            if field2 == 0:
+                print("Cannot divide by zero:", attr, rule, recordClass.get_formatted_string())
+            else:
+                recordClass.__dict__[attr] = recordClass.__dict__[field1] / recordClass.__dict__[field2]
     elif getattr(recordClass, field1, None) is not None:
         # field2 is missing
         # just set the result to field1
@@ -556,6 +595,15 @@ def caluculate_field(recordClass, attr, rule):
         # field1 is missing
         # just set the result to field2
         recordClass.__dict__[attr] = recordClass.__dict__[field2]
+
+def translate_field(recordClass, attr, rule):
+    if len(rule) < 2:
+        return # bad definition in the json file
+    cond = rule[0]
+    newval = rule[1]
+    if eval(cond):
+        # condition is true
+        recordClass.__dict__[attr] = newval
 
 def is_float(text):
     """
@@ -572,7 +620,7 @@ def is_float(text):
     if text.isalpha():
         return False
     try:
-        locale.atof(text)
+        locale.atof(text.strip(map.CurrencySymbol))
         return True
     except ValueError:
         return False

@@ -77,6 +77,7 @@ The recognized controls are:
 |CsvFile|Filename for the input CSV file. This setting is overriden by a -i parameter on the command line. If the parameter does not include a directory name and the CsvFolder is set, the CsvFolder and the parameter file name are joined to create the file's path.|
 |QifFolder|Directory for the output QIF file. Forward slashes as separators are accepted for Windows paths. This setting is overriden by a -o parameter on the command line if the parameter includes a directory name.|
 |QifFile|Filename for the output QIF file. This setting is overriden by a -o parameter on the command line. If the parameter does not include a directory name and the QifFolder is set, the QifFolder and the parameter file name are joined to create the file's path.|
+|CurrencySymbol|Specify a currency symbol to be stripped from currency strings so they can be converted to numbers. Default is blank / disabled.
 
 The lowercase json `Names` represent actual QIF identifiers.
 
@@ -102,13 +103,19 @@ e.g. the symbol MSFT is found in a column `E`, but the name "Microsoft Inc." is 
 This complicates the generation of the
 QIF `!Type:Security` [record](#securitytypemap-section-investment-accounts).
 So the workaround is to use the symbol column `E` 
-for the name, symbol, and security to make the `!Type:Security` and `!Type:Invst` lists.
+for the name, symbol, and security. Then "translate" the security
+to the company name using the [Translations Section](#translations-section-optional)
+to make the `!Type:Security` and `!Type:Invst` lists.
 * The total fees are split between two columns, so the json defines a "Fees" column
 so we can do the math (ref. [CalculationRules](#calculationrules-section-optional)).
 * The "quantity" column is the number of options if the security is an option.
 For the QIF, the quantity needs to represent the number of shares.
-So the json defines the "Multiplier" column so we can do the math
+So the json captures the "Multiplier" CSV column so we can do the math
 (ref. [CalculationRules](#calculationrules-section-optional)).
+* When the security is an option, the "price" column is the price of an option,
+i.e. typically representing 100 shares. So to get a price-per-share, the
+CSV price must be divided by the "multiplier" column.
+This is done in the [CalculationRules](#calculationrules-section-optional).
 
 ### ActionMap Section (Investment Accounts)
 This section defines the translation between the "action"
@@ -117,8 +124,12 @@ For example, in the TW.json file, if the csv column `C` contains "Buy to Open",
 it is translated to a QIF "Buy" record.
 
 The json format looks like this:
-`"csv-nomeclature": "qif-nomemclature"`
-
+```json
+"ActionMap": 
+  {
+    "csv-nomeclature": "qif-nomemclature"
+  }
+```
 An entry of "prompt" for the "qif-nomenclature" causes the program to
 ask the user for the QIF action code for that record.
 The TW.json file has "prompt" for records where there is
@@ -129,7 +140,13 @@ This section defines the translation between the CSV security type
 and the QIF `!Type:Security` security type.
 
 The json format looks like this:
-`"csv-nomeclature": "qif-nomemclature"`
+```json
+"SecurityTypeMap":
+  {
+    "csv-nomeclature": "qif-nomemclature"
+  }
+```
+The TW.json file has a couple of examples.
 
 If the account in an investment account, the program makes a pass
 through the CSV file to collect the list of securities
@@ -141,7 +158,12 @@ This section provides a means to change the sign on specified CSV entries
 when generating the corresponding QIF output.
 
 The json format looks like this:
-`"inverted-field": "invert-condition"`
+```json
+"InvertRules":
+  {
+    "inverted-field": "invert-condition"
+  }
+```
 
 The field to change is specified as the name of the name/value pair.
 
@@ -152,7 +174,7 @@ For example if a field should always be inverted, the value would just be `True`
 Be sure the include the `self.` when referencing condition values.
 All `self.` references will reference the value on the current CSV row.
 
-The condition value is tested using the Python eval() function.
+The condition value is tested using the Python `eval()` function.
 If it evaluates as `True`, the sign of the named field is inverted.
 
 The TW.json file has a couple of examples.
@@ -165,10 +187,41 @@ The program does not handle inputs that are strings.
 Calculations are performed before any [InvertRules](#invertrules-section-optional).
 
 The json format is:
-`"result-field": ["input-field", "operation", "input-field"]`
+```json
+"CalculationRules":
+  {
+    "result-field-a": ["input-field", "operation", "input-field"],
+    "result-field-b": ["input-field", "operation", "input-field"]
+  }
+```
 
-Suppored values for "operation" are "+", "-", and "*".
+Suppored values for "operation" are "+", "-", "/", and "*".
 The expression evaluation code adds the `self.` to all parameters.
 So for example an entry of `"commission": ["commission", "+", "Fees"]`
 results in the operation `self.commission = self.commission + self.Fees`.
 
+### Translations Section (Optional)
+This section provides a means of converting values found in the CSV file
+into something else in the QIF file.
+
+The example TW.json file uses this section to provide the stock's company name
+given the stock's symbol, since the company name is not in the CSV file.
+
+The json format is:
+```json
+"Translations":
+  {
+    "result-field-a": ["condition_a1", "value_a1", "condition_a2", "value_a2", ... "condition_aN", "value_aN"],
+    "result-field-b": ["condition_b1", "value_b1", "condition_b2", "value_b2", ... "condition_bN", "value_bN"]
+  }
+```
+The resulting operation would look something like this:
+```python
+if condition_a1:
+  result-field-a = value_a1
+if condition_a2:
+  result-field-a = value_a2
+...
+```
+Conditions referencing class variables must include the `self.` class reference.
+The condition is evaluated using the Python `eval()` function.
