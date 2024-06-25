@@ -212,7 +212,7 @@ The json format is:
 "Translations":
   {
     "result-field-a": ["condition_a1", "value_a1", "condition_a2", "value_a2", "...etc"],
-    "result-field-b": ["condition_b1", "value_b1", "condition_b2", "value_b2", "...etc""]
+    "result-field-b": ["condition_b1", "value_b1", "condition_b2", "value_b2", "...etc"]
   }
 ```
 The resulting operation would look something like this:
