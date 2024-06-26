@@ -272,7 +272,7 @@ class InvstRecord:
                         and getattr(map,"price",None) is not None \
                         and len(row[map.price]) > 0 \
                         else None
-        self.quantity = locale.atof(row[map.quantity].strip(map.CurrencySymbol)) \
+        self.quantity = locale.atof(row[map.quantity]) \
                         if row and map and getattr(map,"quantity",None) is not None \
                         and len(row[map.quantity]) > 0 \
                         and int(row[map.quantity]) > 0 \
@@ -288,7 +288,7 @@ class InvstRecord:
         self.commission = locale.atof(row[map.commission].strip(map.CurrencySymbol)) if row and map \
                         and getattr(map,"commission",None) is not None \
                         and len(row[map.commission]) > 0 \
-                        and is_float(row[map.commission]) \
+                        and is_float(row[map.commission].strip(map.CurrencySymbol)) \
                         else None
         self.category = row[map.category] if row and map and \
                         getattr(map,"category",None) is not None \
@@ -302,7 +302,7 @@ class InvstRecord:
                         and getattr(map,"amountU",None) is not None \
                         and len(row[map.amountU]) > 0 \
                         else None
-        self.amount_transferred = locale.atof(row[map.amount_transferred]) if row and map \
+        self.amount_transferred = locale.atof(row[map.amount_transferred].strip(map.CurrencySymbol)) if row and map \
                         and getattr(map,"amount_transferred",None) is not None \
                         and len(row[map.amount_transferred]) > 0 \
                         else None
@@ -478,7 +478,8 @@ def readCsv(inf_, outf_, colmap):
                             acct_rec.balance = rec.balance
                             latestDate = rec_time
             except:
-                print("CSV file error (AccountRecord). CSV file may not conform to the json definition file.")
+                print("CSV file error (AccountRecord). CSV file may not conform to the json definition file:")
+                print("  ", row)
             inf_.seek(0)
         outf_.write(acct_rec.get_formatted_string())
 
@@ -502,7 +503,8 @@ def readCsv(inf_, outf_, colmap):
                 outf_.write(sec_rec.getvalue())
             sec_rec.close()
         except:
-            print("CSV file error (SecurityRecord). CSV file may not conform to the json definition file.")
+            print("CSV file error (SecurityRecord). CSV file may not conform to the json definition file:")
+            print("  ", row)
         inf_.seek(0)
 
 
@@ -523,7 +525,8 @@ def readCsv(inf_, outf_, colmap):
         outf_.write(transact_rec.getvalue())
         transact_rec.close()
     except:
-        print("CSV file error (data record). CSV file may not conform to the json definition file.")
+        print("CSV file error (data record). CSV file may not conform to the json definition file:")
+        print("  ", row)
     
 def invert_field(recordClass, attr):
     """
@@ -620,7 +623,7 @@ def is_float(text):
     if text.isalpha():
         return False
     try:
-        locale.atof(text.strip(map.CurrencySymbol))
+        locale.atof(text)
         return True
     except ValueError:
         return False
