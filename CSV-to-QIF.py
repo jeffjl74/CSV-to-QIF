@@ -15,6 +15,7 @@
 
 
 from datetime import datetime
+import glob
 from io import StringIO
 import locale
 import os
@@ -680,9 +681,14 @@ def convert():
                 fromPath = os.path.join(fromFolder, fromFileName)
             else:
                 # there is no json spec
-                # use the parameter
+                # use the cmd line parameter
                 # (param might be empty, which is checked later)
                 fromPath = args.csvFile
+
+            # if the csv file name contains a '*' wildcard, find the newest matching file
+            if fromPath and "*" in os.path.basename(fromPath):
+                list_of_files = glob.glob(fromPath)
+                fromPath = max(list_of_files, key=os.path.getctime)
 
             # get/build QIF file name
             if args.qifFile and os.path.dirname(args.qifFile):

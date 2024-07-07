@@ -38,6 +38,14 @@ A few examples are inlcuded in this repository.
 
 The input and output file names can ommitted if they are specified in the json file.
 
+The input file name, whether on the command line or in the json file, can contain a
+\* wildcard. If present, the program will use the file with the latest change date
+that matches the wildcard specification. For example, if your downloaded csv
+file name includes a date code, something like "mybank_20240630.csv",
+an input file spec of "mybank_*.csv" would process the downloaded file with
+the latest change date (not the date code in the file name, but the operating
+system file change date).
+
 ## Json File
 The program already supports the name/value entries in the
 `self.fields` and `self.ids` arrays in the Python record definitions.
@@ -75,7 +83,7 @@ The recognized controls are:
 |CsvTimeFormat|__Required__. How to parse the date/time in the CSV file. (ref. [Python datetime](https://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior)).|
 |QifTimeFormat|How to output the date/time to the QIF file. Defaults to "%d/%m/%Y". (ref. [Python datetime](https://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior)).|
 |CsvFolder|Directory for the input CSV file. Forward slashes as separators are accepted for Windows paths. This setting is overriden by a -i parameter on the command line if the parameter includes a directory name.|
-|CsvFile|Filename for the input CSV file. This setting is overriden by a -i parameter on the command line. If the parameter does not include a directory name and the CsvFolder is set, the CsvFolder and the parameter file name are joined to create the file's path.|
+|CsvFile|Filename for the input CSV file. This setting is overriden by a -i parameter on the command line. If the parameter does not include a directory name and the CsvFolder is set, the CsvFolder and the parameter file name are joined to create the file's path. If the CsvFile contains a \* wildcard, the newest file that matches the wildcard pattern is used. e.g. "CsvFile": "mybank*.csv would pick the file that matches the pattern (like "mybank_20240630.csv") and has the latest change date.|
 |QifFolder|Directory for the output QIF file. Forward slashes as separators are accepted for Windows paths. This setting is overriden by a -o parameter on the command line if the parameter includes a directory name.|
 |QifFile|Filename for the output QIF file. This setting is overriden by a -o parameter on the command line. If the parameter does not include a directory name and the QifFolder is set, the QifFolder and the parameter file name are joined to create the file's path.|
 |CurrencySymbol|Specify a currency symbol to be stripped from currency strings so they can be converted to numbers. Default is blank / disabled.
