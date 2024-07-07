@@ -637,7 +637,7 @@ def convert():
     # set locale so we handle commas and dots in numbers
     locale.setlocale(locale.LC_ALL, '')
 
-    parser = argparse.ArgumentParser(description='Convert CSV file to QIF',
+    parser = argparse.ArgumentParser(description='Convert CSV file to QIF Version 1.1.0',
             epilog='More info here: https://github.com/jeffjl74/CSV-to-QIF')
     parser.add_argument('-i', dest ='csvFile', 
                     action ='store', help ='CSV file to convert')
